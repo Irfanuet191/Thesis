@@ -147,6 +147,7 @@ celerybeat.pid
 
 # Environments
 HD_Map/
+testing/
 .env
 .venv
 env/
