@@ -16,6 +16,14 @@ from detectron2 import model_zoo
 from roadscene2vec.scene_graph.extraction.bev import bev
 from tqdm import tqdm
 
+#     print(detections)
+
+# /home/irfan/roadscene2vec/roadscene2vec/scene_graph/extraction/bondinboxesConverter.py
+from roadscene2vec.scene_graph.extraction.bondinboxesConverter import convert_to_tracker_format
+from deep_sort_realtime.deepsort_tracker import DeepSort
+tracker = DeepSort(max_age=5)
+
+
 '''RealExtractor initializes relational settings and creates an ImageSceneGraphSequenceGenerator object to extract scene graphs using raw image data.'''
 class RealExtractor(ex):
     def __init__(self, config):
@@ -42,7 +50,7 @@ class RealExtractor(ex):
 
     '''Load scenegraphs using raw image frame tensors'''
     def load(self): #seq_tensors[seq][frame/jpgname] = frame tensor
-        try:
+        # try:
             all_sequence_dirs = [x for x in Path(self.input_path).iterdir() if x.is_dir()]
             all_sequence_dirs = sorted(all_sequence_dirs, key=lambda x: int(x.stem.split('_')[0]))  
             self.dataset.folder_names = [path.stem for path in all_sequence_dirs]
@@ -62,12 +70,33 @@ class RealExtractor(ex):
                 for frame, img in seq_images.items():
                     out_img_path = None
                     bounding_boxes = self.get_bounding_boxes(img_tensor=img, out_img_path=out_img_path)
+                    # print(f"Extracting scene graph for sequence {seq} frame {frame}")
+                    # bbs = object_detector.detect(frame) 
+                    boxes, labels, image_size = bounding_boxes
+                    # print(f"Boxes: {boxes}, Labels: {labels}, Image Size: {image_size}")
+                    detections = convert_to_tracker_format(boxes, labels, confidence=0.5)
+                    # print(f"Detections: {detections}")
+                    # print(f"Image Size: {img}")
+                    tracks = tracker.update_tracks(detections, frame=img) # bbs expected to be a list of detections, each in tuples of ( [left,top,w,h], confidence, detection_class )
+                    list_track_id=[]
+                    # print("tracks  ",tracks)
+                    for track in tracks:
+                        if not track.is_confirmed():
+                            continue
+                        track_id = track.track_id
+                        ltrb = track.to_ltrb()
+                        list_track_id.append(track_id)
+                        
+                        # print(f"Track ID: {track_id}, Bounding Box: {ltrb}")
+                    # print(bounding_boxes)
+                    # print(f"Extracting scene graph for sequence {seq} frame {frame} with {len(list_track_id)} tracks")
+
                     
                     scenegraph = SceneGraph(self.relation_extractor,    
                                                 bounding_boxes = bounding_boxes, 
                                                 bev = self.bev,
                                                 coco_class_names=self.coco_class_names, 
-                                                platform=self.dataset_type)
+                                                platform=self.dataset_type,list_track_id=list_track_id)
 
                     self.dataset.scene_graphs[seq][frame] = scenegraph
                 self.dataset.action_types[seq] = "lanechange" 
@@ -77,12 +106,12 @@ class RealExtractor(ex):
                         l0 = 1.0 if float(lines[0].strip().split(",")[0]) >= 0 else 0.0 
                         self.dataset.labels[seq] = l0
 
-        except Exception as e:
-            pdb.set_trace()
-            import traceback
-            print('We have problem creating the real image scenegraphs')
-            print(e)
-            traceback.print_exc()
+        # except Exception as e:
+        #     pdb.set_trace()
+        #     import traceback
+        #     print('We have problem creating the real image scenegraphs')
+        #     print(e)
+        #     traceback.print_exc()
     
     #returns a numpy array representation of a sequence of images in format (H,W,C)
     def load_images(self, path):

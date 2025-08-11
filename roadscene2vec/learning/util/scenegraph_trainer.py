@@ -145,6 +145,8 @@ class Scenegraph_Trainer(Trainer):
         sorted_seq = sorted(self.scene_graph_dataset.labels)
         if self.config.training_configuration["scenegraph_dataset_type"] == "carla":
             for ind, seq in enumerate(sorted_seq): #for each seq in labels
+                # print(f"Carla Processing sequence {seq} from folder {self.scene_graph_dataset.folder_names[ind]}")
+
                 data_to_append = {"sequence":self.scene_graph_dataset.process_carla_graph_sequences(self.scene_graph_dataset.scene_graphs[seq], self.feature_list, folder_name = self.scene_graph_dataset.folder_names[ind] ), "label":self.scene_graph_dataset.labels[seq], "folder_name": self.scene_graph_dataset.folder_names[ind]}
                 if self.scene_graph_dataset.labels[seq] == 0:
 #                     class_0.append(scene_graph_dataset.scene_graphs[seq]) #right now we are appending whole dictionary that contains data for all frame sg, shld we instead append each frame's sg separately
@@ -155,6 +157,7 @@ class Scenegraph_Trainer(Trainer):
                     
         elif self.config.training_configuration["scenegraph_dataset_type"] == "real":
             for ind, seq in enumerate(sorted_seq): 
+                # print(f"Image Processing sequence {seq} from folder {self.scene_graph_dataset.folder_names[ind]}")
                 data_to_append = {"sequence":self.scene_graph_dataset.process_real_image_graph_sequences(self.scene_graph_dataset.scene_graphs[seq], self.feature_list, folder_name = self.scene_graph_dataset.folder_names[ind] ), "label":self.scene_graph_dataset.labels[seq], "folder_name": self.scene_graph_dataset.folder_names[ind]}
                 if self.scene_graph_dataset.labels[seq] == 0:
 #                     class_0.append(scene_graph_dataset.scene_graphs[seq]) #right now we are appending whole dictionary that contains data for all frame sg, shld we instead append each frame's sg separately

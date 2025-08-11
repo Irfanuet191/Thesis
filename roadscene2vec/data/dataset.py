@@ -1,7 +1,8 @@
 from abc import ABC
 import pickle as pkl
-
-
+import os
+from os.path import isfile, join
+import pickle
 class BaseDataset(ABC):
     '''
     Abstract class defining dataset properties and functions
@@ -34,10 +35,12 @@ class BaseDataset(ABC):
 
     #load/save data from dataset_path into data, labels, meta
     def save(self):
+        # print(f"Saving dataset to {self.dataset_save_path}")    
         with open(self.dataset_save_path, 'wb') as f:
             pkl.dump(self, f)
 
     def load(self):
+        # print(f"loading dataset {self.dataset_save_path}")    
         with open(self.dataset_save_path, 'rb') as f:
             return pkl.load(f)
 
@@ -116,6 +119,8 @@ class SceneGraphDataset(BaseDataset):
             frame_numbers = sorted(list(scenegraphs.keys()))
         scenegraphs = [scenegraphs[frames] for frames in sorted(scenegraphs.keys())]
         sequence = []
+        save_dir = "town2"
+        os.makedirs(save_dir, exist_ok=True)
     
         for idx, (scenegraph, frame_number) in enumerate(zip(scenegraphs, frame_numbers)):
             sg_dict = {}
@@ -124,10 +129,18 @@ class SceneGraphDataset(BaseDataset):
                              node in enumerate(scenegraph.g.nodes)}
     
             sg_dict['node_features'] = scenegraph.get_real_image_node_embeddings(feature_list)
+            # print("sg_dict['node_features'] ",sg_dict['node_features'] )
             sg_dict['edge_index'], sg_dict['edge_attr'] = scenegraph.get_real_image_edge_embeddings(node_name2idx)
+            # print("sg_dict['edge_index'] ",sg_dict['edge_index'] )
             sg_dict['folder_name'] = folder_name
             sg_dict['frame_number'] = frame_number
             sg_dict['node_order'] = node_name2idx
-            sequence.append(sg_dict)
+            # sequence.append(sg_dict)
+            filename = f"scenegraph_{frame_number}.pkl"
+            filepath = os.path.join(save_dir, filename)
+
+            # Save the sg_dict to a pickle file
+            with open(filepath, 'wb') as f:
+                pickle.dump(sg_dict, f)
     
         return sequence

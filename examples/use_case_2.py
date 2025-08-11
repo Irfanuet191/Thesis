@@ -7,7 +7,8 @@ from roadscene2vec.util.config_parser import configuration
 import roadscene2vec.scene_graph.extraction.image_extractor as RealEx
 from roadscene2vec.learning.util.scenegraph_trainer import Scenegraph_Trainer
 from torch_geometric.data import Data, DataLoader
-
+#  training_config = configuration(r"use_case_2_learning_config.yaml",from_function = True) #create training config object                                                                                                               
+    # trainer = Scenegraph_Trainer(training_config) #create trainer object using config
 sys.modules['util'] = roadscene2vec.util
 
 
@@ -38,17 +39,19 @@ def extract_seq(scenegraph_extraction_config):
 def risk_assess():
     scenegraph_extraction_config = configuration(r"use_case_2_scenegraph_extraction_config.yaml",from_function = True) #create scenegraph extraction config object
     extracted_scenegraphs = extract_seq(scenegraph_extraction_config) #extracted scenegraphs for each frame for the given sequence into a ScenegraphDataset 
+    print(f"Extracted scenegraphs: {extracted_scenegraphs}")
     training_config = configuration(r"use_case_2_learning_config.yaml",from_function = True) #create training config object                                                                                                               
     trainer = Scenegraph_Trainer(training_config) #create trainer object using config
-    trainer.split_dataset() #split ScenegraphDataset specified in learning config into training, testing data
-    trainer.build_model() #build model specified in learning config
-    trainer.learn()
-    model_input = format_use_case_model_input(extracted_scenegraphs, trainer) #turn extracted original sequence's extracted ScenegraphDataset into model input
-    output, _ = trainer.model.forward(*model_input) #output risk assessment for the original sequence 
-    return output   
+    trainer.build_transfer_learning_dataset()
+    # trainer.split_dataset() #split ScenegraphDataset specified in learning config into training, testing data
+    # trainer.build_model() #build model specified in learning config
+    # trainer.learn()
+    # model_input = format_use_case_model_input(extracted_scenegraphs, trainer) #turn extracted original sequence's extracted ScenegraphDataset into model input
+    # output, _ = trainer.model.forward(*model_input) #output risk assessment for the original sequence 
+    # return output   
 
 if __name__ == "__main__":
-    print(risk_assess()) #Assess risk of a driving sequence
+    risk_assess() #Assess risk of a driving sequence
     
     
     

@@ -7,14 +7,11 @@ from sklearn.utils.class_weight import compute_class_weight
 from sklearn.utils import resample
 from sklearn.model_selection import train_test_split, StratifiedKFold
 from tqdm import tqdm
-from trainer import Trainer
+from roadscene2vec.learning.util.trainer import Trainer
 from roadscene2vec.data.dataset import SceneGraphDataset
-from torch_geometric.data import Data, DataLoader, DataListLoader
+from torch_geometric.data import Data
+# from torch_geometric.loader import DataLoader, DataListLoader
 from roadscene2vec.learning.util.metrics import get_metrics, log_wandb, log_wandb_transfer_learning 
-
-#  scene_graph_dataset  = SceneGraphDataset()
-#         scene_graph_dataset.dataset_save_path = self.config.location_data["input_path"]
-#         # self.scene_graph_dataset = scene_graph_dataset.load()  
 
 
 class Scenegraph_Trainer(Trainer):
@@ -188,199 +185,199 @@ class Scenegraph_Trainer(Trainer):
 
 
 
-    def train(self): #edit
-        if (self.config.training_configuration['task_type'] in ['sequence_classification','graph_classification','collision_prediction']):
-            tqdm_bar = tqdm(range(self.config.training_configuration['epochs']))
+    # def train(self): #edit
+    #     if (self.config.training_configuration['task_type'] in ['sequence_classification','graph_classification','collision_prediction']):
+    #         tqdm_bar = tqdm(range(self.config.training_configuration['epochs']))
     
-            for epoch_idx in tqdm_bar: # iterate through epoch   
-                acc_loss_train = 0
-                self.sequence_loader = DataListLoader(self.training_data, batch_size=self.config.training_configuration["batch_size"])
+    #         for epoch_idx in tqdm_bar: # iterate through epoch   
+    #             acc_loss_train = 0
+    #             self.sequence_loader = DataListLoader(self.training_data, batch_size=self.config.training_configuration["batch_size"])
     
-                for data_list in self.sequence_loader: # iterate through batches of the dataset
-                    self.model.train()
-                    self.optimizer.zero_grad()
-                    labels = torch.empty(0).long().to(self.config.model_configuration["device"])
-                    outputs = torch.empty(0,2).to(self.config.model_configuration["device"])
+    #             for data_list in self.sequence_loader: # iterate through batches of the dataset
+    #                 self.model.train()
+    #                 self.optimizer.zero_grad()
+    #                 labels = torch.empty(0).long().to(self.config.model_configuration["device"])
+    #                 outputs = torch.empty(0,2).to(self.config.model_configuration["device"])
     
-                    #need to change below for current implementation
-                    for sequence in data_list: # iterate through scene-graph sequences in the batch
-                        data, label = sequence['sequence'], sequence['label'] 
-                        graph_list = [Data(x=g['node_features'], edge_index=g['edge_index'], edge_attr=g['edge_attr']) for g in data]  
-                        self.train_loader = DataLoader(graph_list, batch_size=len(graph_list))
-                        sequence = next(iter(self.train_loader)).to(self.config.model_configuration["device"])
-                        output, _ = self.model.forward(sequence.x, sequence.edge_index, sequence.edge_attr, sequence.batch)
-                        if self.config.training_configuration['task_type'] == 'sequence_classification': # seq vs graph based learning
-                            labels  = torch.cat([labels, torch.LongTensor([label]).to(self.config.model_configuration["device"])], dim=0)
-                        elif self.config.training_configuration['task_type'] in ['collision_prediction']:
-                            label = torch.LongTensor(np.full(output.shape[0], label)).to(self.config.model_configuration["device"]) #fill label to length of the sequence. shape (len_input_sequence, 1)
-                            labels  = torch.cat([labels, label], dim=0)
-                        else:
-                            raise ValueError('task_type is unimplemented')
-                        outputs = torch.cat([outputs, output.view(-1, 2)], dim=0) #in this case the output is of shape (len_input_sequence, 2)
-                    loss_train = self.loss_func(outputs, labels)
-                    loss_train.backward()
-                    acc_loss_train += loss_train.detach().cpu().item() * len(data_list)
-                    self.optimizer.step()
-                    del loss_train
+    #                 #need to change below for current implementation
+    #                 for sequence in data_list: # iterate through scene-graph sequences in the batch
+    #                     data, label = sequence['sequence'], sequence['label'] 
+    #                     graph_list = [Data(x=g['node_features'], edge_index=g['edge_index'], edge_attr=g['edge_attr']) for g in data]  
+    #                     self.train_loader = DataLoader(graph_list, batch_size=len(graph_list))
+    #                     sequence = next(iter(self.train_loader)).to(self.config.model_configuration["device"])
+    #                     output, _ = self.model.forward(sequence.x, sequence.edge_index, sequence.edge_attr, sequence.batch)
+    #                     if self.config.training_configuration['task_type'] == 'sequence_classification': # seq vs graph based learning
+    #                         labels  = torch.cat([labels, torch.LongTensor([label]).to(self.config.model_configuration["device"])], dim=0)
+    #                     elif self.config.training_configuration['task_type'] in ['collision_prediction']:
+    #                         label = torch.LongTensor(np.full(output.shape[0], label)).to(self.config.model_configuration["device"]) #fill label to length of the sequence. shape (len_input_sequence, 1)
+    #                         labels  = torch.cat([labels, label], dim=0)
+    #                     else:
+    #                         raise ValueError('task_type is unimplemented')
+    #                     outputs = torch.cat([outputs, output.view(-1, 2)], dim=0) #in this case the output is of shape (len_input_sequence, 2)
+    #                 loss_train = self.loss_func(outputs, labels)
+    #                 loss_train.backward()
+    #                 acc_loss_train += loss_train.detach().cpu().item() * len(data_list)
+    #                 self.optimizer.step()
+    #                 del loss_train
     
-                acc_loss_train /= len(self.training_data)
-                tqdm_bar.set_description('Epoch: {:04d}, loss_train: {:.4f}'.format(epoch_idx, acc_loss_train))
+    #             acc_loss_train /= len(self.training_data)
+    #             tqdm_bar.set_description('Epoch: {:04d}, loss_train: {:.4f}'.format(epoch_idx, acc_loss_train))
     
-                if epoch_idx % self.config.training_configuration["test_step"] == 0:
-                    self.evaluate(epoch_idx)
+    #             if epoch_idx % self.config.training_configuration["test_step"] == 0:
+    #                 self.evaluate(epoch_idx)
                     
-        else:
-            raise ValueError('train(): task type error') 
+    #     else:
+    #         raise ValueError('train(): task type error') 
     
                 
-    def cross_valid(self): #edit
+    # def cross_valid(self): #edit
     
-           # KFold cross validation with similar class distribution in each fold
-           skf = StratifiedKFold(n_splits=self.config.training_configuration["n_fold"])
-           X = np.array(self.training_data + self.testing_data)
-           y = np.array(self.training_labels + self.testing_labels)
+    #        # KFold cross validation with similar class distribution in each fold
+    #        skf = StratifiedKFold(n_splits=self.config.training_configuration["n_fold"])
+    #        X = np.array(self.training_data + self.testing_data)
+    #        y = np.array(self.training_labels + self.testing_labels)
     
-           # self.results stores average metrics for the the n_folds
-           self.results = {}
-           self.fold = 1
+    #        # self.results stores average metrics for the the n_folds
+    #        self.results = {}
+    #        self.fold = 1
     
-           # Split training and testing data based on n_splits (Folds)
-           for train_index, test_index in skf.split(X, y):
-               X_train, X_test = X[train_index], X[test_index]
-               y_train, y_test = y[train_index], y[test_index]
+    #        # Split training and testing data based on n_splits (Folds)
+    #        for train_index, test_index in skf.split(X, y):
+    #            X_train, X_test = X[train_index], X[test_index]
+    #            y_train, y_test = y[train_index], y[test_index]
     
-               self.training_data = X_train
-               self.testing_data  = X_test
-               self.training_labels = y_train
-               self.testing_labels  = y_test
+    #            self.training_data = X_train
+    #            self.testing_data  = X_test
+    #            self.training_labels = y_train
+    #            self.testing_labels  = y_test
     
-               if self.config.training_configuration['task_type'] == 'sequence_classification':
-                   print('\nFold {}'.format(self.fold))
-                   print("Number of Sequences Included: ", len(self.training_data))
-                   print("Num Labels in Each Class: " + str(np.unique(self.training_labels, return_counts=True)[1]) + ", Class Weights: " + str(self.class_weights))
+    #            if self.config.training_configuration['task_type'] == 'sequence_classification':
+    #                print('\nFold {}'.format(self.fold))
+    #                print("Number of Sequences Included: ", len(self.training_data))
+    #                print("Num Labels in Each Class: " + str(np.unique(self.training_labels, return_counts=True)[1]) + ", Class Weights: " + str(self.class_weights))
       
-               elif self.config.training_configuration['task_type'] == 'collision_prediction':
-                   print('\nFold {}'.format(self.fold))
-                   print("Number of Training Sequences Included: ", len(self.training_data))
-                   print("Number of Testing Sequences Included: ",  len(self.testing_data))
-                   print("Number of Training Labels in Each Class: " + str(np.unique(self.total_train_labels, return_counts=True)[1]) + ", Class Weights: " + str(self.class_weights))
-                   print("Number of Testing Labels in Each Class: " + str(np.unique(self.total_test_labels, return_counts=True)[1]) + ", Class Weights: " + str(self.class_weights))
+    #            elif self.config.training_configuration['task_type'] == 'collision_prediction':
+    #                print('\nFold {}'.format(self.fold))
+    #                print("Number of Training Sequences Included: ", len(self.training_data))
+    #                print("Number of Testing Sequences Included: ",  len(self.testing_data))
+    #                print("Number of Training Labels in Each Class: " + str(np.unique(self.total_train_labels, return_counts=True)[1]) + ", Class Weights: " + str(self.class_weights))
+    #                print("Number of Testing Labels in Each Class: " + str(np.unique(self.total_test_labels, return_counts=True)[1]) + ", Class Weights: " + str(self.class_weights))
                
-               self.best_val_loss = 99999
-               self.train()
-               outputs_train, labels_train, outputs_test, labels_test, metrics = self.evaluate(self.fold)
-               self.update_sg_cross_valid_metrics(outputs_train, labels_train, outputs_test, labels_test, metrics)
+    #            self.best_val_loss = 99999
+    #            self.train()
+    #            outputs_train, labels_train, outputs_test, labels_test, metrics = self.evaluate(self.fold)
+    #            self.update_sg_cross_valid_metrics(outputs_train, labels_train, outputs_test, labels_test, metrics)
     
-               if self.fold != self.config.training_configuration["n_fold"]:            
-                   del self.model
-                   del self.optimizer
-                   self.build_model()
+    #            if self.fold != self.config.training_configuration["n_fold"]:            
+    #                del self.model
+    #                del self.optimizer
+    #                self.build_model()
                    
-               self.fold += 1            
-           del self.results
+    #            self.fold += 1            
+    #        del self.results
                    
                    
-    def inference(self, testing_data, testing_labels):
-            labels = torch.LongTensor().to(self.config.model_configuration["device"])
-            outputs = torch.FloatTensor().to(self.config.model_configuration["device"])
-            acc_loss_test = 0
-            attns_weights = []
-            node_attns = []
-            folder_names = []
-            sum_prediction_frame = 0
-            sum_seq_len = 0
-            num_risky_sequences = 0
-            num_safe_sequences = 0
-            sum_predicted_risky_indices = 0 #sum is calculated as (value * (index+1))/sum(range(seq_len)) for each value and index in the sequence.
-            sum_predicted_safe_indices = 0  #sum is calculated as ((1-value) * (index+1))/sum(range(seq_len)) for each value and index in the sequence.
-            inference_time = 0 
-            prof_result = ""
-            correct_risky_seq = 0
-            correct_safe_seq = 0
-            incorrect_risky_seq = 0
-            incorrect_safe_seq = 0
+    # def inference(self, testing_data, testing_labels):
+    #         labels = torch.LongTensor().to(self.config.model_configuration["device"])
+    #         outputs = torch.FloatTensor().to(self.config.model_configuration["device"])
+    #         acc_loss_test = 0
+    #         attns_weights = []
+    #         node_attns = []
+    #         folder_names = []
+    #         sum_prediction_frame = 0
+    #         sum_seq_len = 0
+    #         num_risky_sequences = 0
+    #         num_safe_sequences = 0
+    #         sum_predicted_risky_indices = 0 #sum is calculated as (value * (index+1))/sum(range(seq_len)) for each value and index in the sequence.
+    #         sum_predicted_safe_indices = 0  #sum is calculated as ((1-value) * (index+1))/sum(range(seq_len)) for each value and index in the sequence.
+    #         inference_time = 0 #TODO: remove this metric
+    #         prof_result = ""
+    #         correct_risky_seq = 0
+    #         correct_safe_seq = 0
+    #         incorrect_risky_seq = 0
+    #         incorrect_safe_seq = 0
     
-            with torch.autograd.profiler.profile(enabled=False, use_cuda=True) as prof:
-                with torch.no_grad():
-                    for i in range(len(testing_data)): # iterate through scenegraphs
-                        data, label = testing_data[i]['sequence'], testing_labels[i]
-                        folder_names.append(testing_data[i]['folder_name'])
-                        data_list = [Data(x=g['node_features'], edge_index=g['edge_index'], edge_attr=g['edge_attr']) for g in data]
-                        self.test_loader = DataLoader(data_list, batch_size=len(data_list))
-                        sequence = next(iter(self.test_loader)).to(self.config.model_configuration["device"])
-                        self.model.eval()
+    #         with torch.autograd.profiler.profile(enabled=False, use_cuda=True) as prof:
+    #             with torch.no_grad():
+    #                 for i in range(len(testing_data)): # iterate through scenegraphs
+    #                     data, label = testing_data[i]['sequence'], testing_labels[i]
+    #                     folder_names.append(testing_data[i]['folder_name'])
+    #                     data_list = [Data(x=g['node_features'], edge_index=g['edge_index'], edge_attr=g['edge_attr']) for g in data]
+    #                     self.test_loader = DataLoader(data_list, batch_size=len(data_list))
+    #                     sequence = next(iter(self.test_loader)).to(self.config.model_configuration["device"])
+    #                     self.model.eval()
 
-                        output, attns = self.model.forward(sequence.x, sequence.edge_index, sequence.edge_attr, sequence.batch)
+    #                     output, attns = self.model.forward(sequence.x, sequence.edge_index, sequence.edge_attr, sequence.batch)
 
-                        inference_time += 0
-                        output = output.view(-1,2)
-                        label = torch.LongTensor(np.full(output.shape[0], label)).to(self.config.model_configuration["device"]) #fill label to length of the sequence.
+    #                     inference_time += 0
+    #                     output = output.view(-1,2)
+    #                     label = torch.LongTensor(np.full(output.shape[0], label)).to(self.config.model_configuration["device"]) #fill label to length of the sequence.
     
-                        #log metrics for risky and non-risky clips separately.
-                        if(1 in label):
-                            preds = output.max(1)[1].type_as(label)
-                            num_risky_sequences += 1
-                            sum_seq_len += output.shape[0]
-                            if (1 in preds):
-                                correct_risky_seq += 1 #sequence level metrics
-                                sum_prediction_frame += torch.where(preds == 1)[0][0].item() #returns the first index of a "risky" prediction in this sequence.
-                                sum_predicted_risky_indices += torch.sum(torch.where(preds==1)[0]+1).item()/np.sum(range(output.shape[0]+1)) #(1*index)/seq_len added to sum.
-                            else:
-                                incorrect_risky_seq += 1
-                                sum_prediction_frame += output.shape[0] #if no risky predictions are made, then add the full sequence length to running avg.
-                        elif(0 in label):
-                            preds = output.max(1)[1].type_as(label)
-                            num_safe_sequences += 1
-                            if (1 in preds): #sequence level metrics
-                                incorrect_safe_seq += 1 
-                            else:
-                                correct_safe_seq += 1 
+    #                     #log metrics for risky and non-risky clips separately.
+    #                     if(1 in label):
+    #                         preds = output.max(1)[1].type_as(label)
+    #                         num_risky_sequences += 1
+    #                         sum_seq_len += output.shape[0]
+    #                         if (1 in preds):
+    #                             correct_risky_seq += 1 #sequence level metrics
+    #                             sum_prediction_frame += torch.where(preds == 1)[0][0].item() #returns the first index of a "risky" prediction in this sequence.
+    #                             sum_predicted_risky_indices += torch.sum(torch.where(preds==1)[0]+1).item()/np.sum(range(output.shape[0]+1)) #(1*index)/seq_len added to sum.
+    #                         else:
+    #                             incorrect_risky_seq += 1
+    #                             sum_prediction_frame += output.shape[0] #if no risky predictions are made, then add the full sequence length to running avg.
+    #                     elif(0 in label):
+    #                         preds = output.max(1)[1].type_as(label)
+    #                         num_safe_sequences += 1
+    #                         if (1 in preds): #sequence level metrics
+    #                             incorrect_safe_seq += 1 
+    #                         else:
+    #                             correct_safe_seq += 1 
     
-                            if (0 in preds):
-                                sum_predicted_safe_indices += torch.sum(torch.where(preds==0)[0]+1).item()/np.sum(range(output.shape[0]+1)) #(1*index)/seq_len added to sum.
+    #                         if (0 in preds):
+    #                             sum_predicted_safe_indices += torch.sum(torch.where(preds==0)[0]+1).item()/np.sum(range(output.shape[0]+1)) #(1*index)/seq_len added to sum.
     
-                        loss_test = self.loss_func(output, label)
-                        acc_loss_test += loss_test.detach().cpu().item()
+    #                     loss_test = self.loss_func(output, label)
+    #                     acc_loss_test += loss_test.detach().cpu().item()
     
-                        outputs = torch.cat([outputs, output], dim=0)
-                        labels = torch.cat([labels, label], dim=0)
+    #                     outputs = torch.cat([outputs, output], dim=0)
+    #                     labels = torch.cat([labels, label], dim=0)
     
-                        if 'lstm_attn_weights' in attns:
-                            attns_weights.append(attns['lstm_attn_weights'].squeeze().detach().cpu().numpy().tolist())
-                        if 'pool_score' in attns:
-                            node_attn = {}
-                            node_attn["original_batch"] = sequence.batch.detach().cpu().numpy().tolist()
-                            node_attn["pool_perm"] = attns['pool_perm'].detach().cpu().numpy().tolist()
-                            node_attn["pool_batch"] = attns['batch'].detach().cpu().numpy().tolist()
-                            node_attn["pool_score"] = attns['pool_score'].detach().cpu().numpy().tolist()
-                            node_attns.append(node_attn)
+    #                     if 'lstm_attn_weights' in attns:
+    #                         attns_weights.append(attns['lstm_attn_weights'].squeeze().detach().cpu().numpy().tolist())
+    #                     if 'pool_score' in attns:
+    #                         node_attn = {}
+    #                         node_attn["original_batch"] = sequence.batch.detach().cpu().numpy().tolist()
+    #                         node_attn["pool_perm"] = attns['pool_perm'].detach().cpu().numpy().tolist()
+    #                         node_attn["pool_batch"] = attns['batch'].detach().cpu().numpy().tolist()
+    #                         node_attn["pool_score"] = attns['pool_score'].detach().cpu().numpy().tolist()
+    #                         node_attns.append(node_attn)
     
-            avg_risky_prediction_frame = sum_prediction_frame / num_risky_sequences #avg of first indices in a sequence that a risky frame is first correctly predicted.
-            avg_risky_seq_len = sum_seq_len / num_risky_sequences #sequence length for comparison with the prediction frame metric. 
-            avg_predicted_risky_indices = sum_predicted_risky_indices / num_risky_sequences
-            avg_predicted_safe_indices = sum_predicted_safe_indices / num_safe_sequences
-            seq_tpr = correct_risky_seq / num_risky_sequences
-            seq_fpr = incorrect_safe_seq / num_safe_sequences
-            seq_tnr = correct_safe_seq / num_safe_sequences
-            seq_fnr = incorrect_risky_seq / num_risky_sequences
-            if prof != None:
-                prof_result = prof.key_averages().table(sort_by="cuda_time_total")
+    #         avg_risky_prediction_frame = sum_prediction_frame / num_risky_sequences #avg of first indices in a sequence that a risky frame is first correctly predicted.
+    #         avg_risky_seq_len = sum_seq_len / num_risky_sequences #sequence length for comparison with the prediction frame metric. 
+    #         avg_predicted_risky_indices = sum_predicted_risky_indices / num_risky_sequences
+    #         avg_predicted_safe_indices = sum_predicted_safe_indices / num_safe_sequences
+    #         seq_tpr = correct_risky_seq / num_risky_sequences
+    #         seq_fpr = incorrect_safe_seq / num_safe_sequences
+    #         seq_tnr = correct_safe_seq / num_safe_sequences
+    #         seq_fnr = incorrect_risky_seq / num_risky_sequences
+    #         if prof != None:
+    #             prof_result = prof.key_averages().table(sort_by="cuda_time_total")
     
-            return outputs, \
-                    labels, \
-                    acc_loss_test/len(testing_data), \
-                    attns_weights, \
-                    node_attns, \
-                    avg_risky_prediction_frame, \
-                    avg_risky_seq_len, \
-                    avg_predicted_risky_indices, \
-                    avg_predicted_safe_indices, \
-                    inference_time, \
-                    prof_result, \
-                    seq_tpr, \
-                    seq_fpr, \
-                    seq_tnr, \
-                    seq_fnr, folder_names
+    #         return outputs, \
+    #                 labels, \
+    #                 acc_loss_test/len(testing_data), \
+    #                 attns_weights, \
+    #                 node_attns, \
+    #                 avg_risky_prediction_frame, \
+    #                 avg_risky_seq_len, \
+    #                 avg_predicted_risky_indices, \
+    #                 avg_predicted_safe_indices, \
+    #                 inference_time, \
+    #                 prof_result, \
+    #                 seq_tpr, \
+    #                 seq_fpr, \
+    #                 seq_tnr, \
+    #                 seq_fnr, folder_names
 
    
 
@@ -480,6 +477,7 @@ class Scenegraph_Trainer(Trainer):
 
     
     # Averages metrics after the end of each cross validation fold
+    #TODO: migrate this functionality to metrics instead of having the same code in all the trainers.
     def update_sg_cross_valid_metrics(self, outputs_train, labels_train, outputs_test, labels_test, metrics):
         if self.fold == 1:
             self.results['outputs_train'] = outputs_train
@@ -580,3 +578,5 @@ class Scenegraph_Trainer(Trainer):
                 log_wandb(final_results)
             
             return self.results['outputs_train'], self.results['labels_train'], self.results['outputs_test'], self.results['labels_test'], final_results
+
+

@@ -1,7 +1,7 @@
 ---
 location_data:
-    input_path: 'use_case_data/testing_scenegraph_dataset.pkl'#path to pkl containing scenegraph dataset training/testing data
-    transfer_path: null #path to transfer dataset for transfer learning
+    input_path: '/home/irfan/roadscene2vec/examples/object_based_sg_extraction_outputtest.pkl'
+    transfer_path: '/home/irfan/roadscene2vec/examples/object_based_sg_extraction_outputtest.pkl' #path to transfer dataset for transfer learning
     
 model_configuration:
   num_relations: 12 #num of types of relations extracted, needed only for graph based models 

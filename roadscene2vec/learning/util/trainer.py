@@ -11,8 +11,8 @@ import random
 
 from roadscene2vec.learning.model.cnn_lstm import CNN_LSTM_Classifier
 from roadscene2vec.learning.model.lstm import LSTM_Classifier
-from roadscene2vec.learning.model.mrgcn import MRGCN
-from roadscene2vec.learning.model.mrgin import MRGIN
+# from roadscene2vec.learning.model.mrgcn import MRGCN
+# from roadscene2vec.learning.model.mrgin import MRGIN
 from roadscene2vec.learning.model.cnn import CNN_Classifier
 from roadscene2vec.learning.model.resnet50_lstm import ResNet50_LSTM_Classifier
 from roadscene2vec.learning.model.resnet50 import ResNet50_Classifier
@@ -68,11 +68,11 @@ class Trainer:
         # BD mode
         #self.config.num_features = len(self.feature_list)
         #self.config.num_relations = max([r.value for r in Relations])+1
-        if self.config.model_configuration["model"] == "mrgcn":
-            self.model = MRGCN(self.config).to(self.config.model_configuration["device"])
-        elif self.config.model_configuration["model"]  == "mrgin":
-            self.model = MRGIN(self.config).to(self.config.model_configuration["device"])
-        elif self.config.model_configuration["model"]  == "cnn":
+        # if self.config.model_configuration["model"] == "mrgcn":
+        #     self.model = MRGCN(self.config).to(self.config.model_configuration["device"])
+        # elif self.config.model_configuration["model"]  == "mrgin":
+        #     self.model = MRGIN(self.config).to(self.config.model_configuration["device"])
+        if self.config.model_configuration["model"]  == "cnn":
             self.model = CNN_Classifier((self.config.training_configuration['batch_size'], self.frame_limit,self.color_channels, self.im_height, self.im_width), self.config).to(self.config.model_configuration["device"])
         elif self.config.model_configuration["model"]  == "cnn_lstm":
             self.model = CNN_LSTM_Classifier((self.config.training_configuration['batch_size'], self.frame_limit,self.color_channels, self.im_height, self.im_width), self.config).to(self.config.model_configuration["device"])

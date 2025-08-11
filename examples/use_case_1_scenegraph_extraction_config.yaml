@@ -1,12 +1,13 @@
 ---
-dataset_type: 'image' #Type of data from which to extract scenegraphs from. Options: 'image', 'carla'
+dataset_type: 'image' #Type of data from which to extract scenegraphs from. Options: 'image', 'carla' '/home/irfan/Downloads/use_case_data-20250504T102722Z-001/use_case_data/lanechange'  /home/irfan/data/test
 location_data:
-    input_path: 'use_case_data/lanechange' #REPLACE WITH PATH TO DOWNLOADED DATASET. input path to main directory containing driving sequence subdirectories from which to extract scenegraphs
-    data_save_path: 'use_case_1_sg_extraction_output.pkl' #path to save extracted scenegraph dataset
+    input_path: '/home/irfan/Downloads/use_case_data-20250504T102722Z-001/use_case_data/lanechange' #REPLACE WITH PATH TO DOWNLOADED DATASET. input path to main directory containing driving sequence subdirectories from which to extract scenegraphs
+    data_save_path: 'use_case_1_sg_extraction_outputtest.pkl' #path to save extracted scenegraph dataset
 
 relation_extraction_settings:
   frames_limit: null #extract scenegraphs for 1 frame every n frames per sequence subdirectory. currently only functional for image based extraction. Options: null(None), Integer n
-  ACTOR_NAMES: ["ego_car", 'car','moto','bicycle','ped','lane','light','sign', 'road'] #types of actors that can be found in data sequences. ego_car actor represents the car from whose perspective we are viewing the road. this array's structure is also used for one-hot encoding when creating node embeddings, "ego_car", "lane", "road" are assumed to always be in this list.
+  # ACTOR_NAMES: ["ego_car", 'object_1','object_2','object_3','object_4','lane','light','sign', 'road'] #types of actors that can be found in data sequences. ego_car actor represents the car from whose perspective we are viewing the road. this array's structure is also used for one-hot encoding when creating node embeddings, "ego_car", "lane", "road" are assumed to always be in this list.
+  ACTOR_NAMES: ["ego_car", 'object_1_','object_2_','object_3_','object_4_','lane','light','sign', 'road'] #types of actors that can be found in data sequences. ego_car actor represents the car from whose perspective we are viewing the road. this array's structure is also used for one-hot encoding when creating node embeddings, "ego_car", "lane", "road" are assumed to always be in this list.
   RELATION_NAMES: ['isIn', 'inDFrontOf', 'inSFrontOf', 'atDRearOf', 'atSRearOf', 'toLeftOf', 'toRightOf', 'near_coll', 'super_near' , 'very_near', 'near' ,'visible'] #types of relations to extract
   
   #actor types specified in proximity_relation_list, directional_relation_list must first be defined in ACTOR_NAMES
@@ -30,4 +31,4 @@ relation_extraction_settings:
 
 
 image_settings: #path to bev calibration data. only for use with real image scenegraph extraction
-    BEV_PATH: 'use_case_data/bev.json'
+    BEV_PATH: '/home/irfan/Downloads/use_case_data-20250504T102722Z-001/use_case_data/bev.json'

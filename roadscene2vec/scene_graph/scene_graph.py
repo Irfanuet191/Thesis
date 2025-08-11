@@ -13,7 +13,7 @@ from collections import defaultdict
 class SceneGraph:
     
     #graph can be initialized with a framedict containing raw Carla data to load all objects at once
-    def __init__(self, relation_extractor, framedict= None, framenum=None, bounding_boxes = None, bev = None, coco_class_names=None, platform='carla'):
+    def __init__(self, relation_extractor, framedict= None, framenum=None, bounding_boxes = None, bev = None, coco_class_names=None, list_track_id=None,platform='carla'):
         #configure relation extraction settings
         self.relation_extractor = relation_extractor
         
@@ -54,14 +54,18 @@ class SceneGraph:
     
             # convert bounding boxes to nodes and build relations.
             boxes, labels, image_size = bounding_boxes
-            self.get_nodes_from_bboxes(bev, boxes, labels, coco_class_names)
+            self.get_nodes_from_bboxes(bev, boxes, labels, coco_class_names,list_track_id)
             self.relation_extractor.extract_semantic_relations(self)
 
 
-    def get_nodes_from_bboxes(self, bev, boxes, labels, coco_class_names):
+    def get_nodes_from_bboxes(self, bev, boxes, labels, coco_class_names,list_track_id):
+        i=0
+        # print("Boxes: ", boxes)
         for idx, (box, label) in enumerate(zip(boxes, labels)):
             box = box.cpu().numpy().tolist()
             class_name = coco_class_names[label]
+            # print("Processing bounding box: ", class_name)
+            # filter out boxes that are too small
             attr = {'left': box[0], 'top': box[1], 'right': box[2], 'bottom': box[3]}
             
             # exclude vehicle dashboard
@@ -71,15 +75,44 @@ class SceneGraph:
             # filter traffic participants
             actor_type = ""
             for actor_ in range(len(self.relation_extractor.actors)):
+                # print("Actor: ", self.relation_extractor.actors[actor_])
+                # print(self.relation_extractor.relation_extraction_settings[""])
                 if class_name == self.relation_extractor.actors[actor_]:
                     actor_type = self.relation_extractor.actors[actor_]
+                    # print("Actor type: ", actor_type)
+                    # print("Actor actor_: ", actor_)
+
                     actor_value = actor_
                 elif f"{self.relation_extractor.actors[actor_].upper()}_NAMES" in self.relation_extractor.conf.relation_extraction_settings:
                     if class_name in self.relation_extractor.conf.relation_extraction_settings[f"{self.relation_extractor.actors[actor_].upper()}_NAMES"]: #ie specific car name
                         actor_type = self.relation_extractor.actors[actor_]
+                        # print("Actor type: ", actor_type)
+                        # print("Actor actor_: ", actor_)
                         actor_value = actor_
+                # print(class_name, self.relation_extractor.conf.relation_extraction_settings["CAR_NAMES"])
+                elif any(class_name in item.lower() for item in self.relation_extractor.conf.relation_extraction_settings["MOTO_NAMES"]):
+                # if class_name in self.relation_extractor.conf.relation_extraction_settings["MOTO_NAMES"]:
+                    actor_type = self.relation_extractor.actors[1]
+                    actor_value = actor_
+                elif any(class_name in item.lower() for item in self.relation_extractor.conf.relation_extraction_settings["BICYCLE_NAMES"]):
+    
+                # elif class_name == self.relation_extractor.conf.relation_extraction_settings["BICYCLE_NAMES"]:
+                    actor_type = self.relation_extractor.actors[2]
+                    actor_value = actor_
+                # elif class_name == self.relation_extractor.conf.relation_extraction_settings["PED_NAMES"]:
+                elif any(class_name in item.lower() for item in self.relation_extractor.conf.relation_extraction_settings["PED_NAMES"]):
+    
+                    actor_type = self.relation_extractor.actors[3]
+                    actor_value = actor_
+                elif any(class_name in item.lower() for item in self.relation_extractor.conf.relation_extraction_settings["CAR_NAMES"]):
+                # elif class_name == self.relation_extractor.conf.relation_extraction_settings["CAR_NAMES"]:
+                    actor_type = self.relation_extractor.actors[4]
+                    actor_value = actor_
+            # print("Actor type 1: ", actor_type)
+
             if actor_type == "": #if actor's type not included in ACTOR_NAMES
                 continue
+            # print("Actor type 2: ", actor_type)
 
             # map center-bottom of bounding box to warped image
             x_mid = (attr['right'] + attr['left']) / 2
@@ -93,20 +126,24 @@ class SceneGraph:
             # due to bev warp, vehicles far from horizon get warped behind car, thus we will default them as far from vehcile
             if attr['location_y'] > self.egoNode.attr['location_y']:
                 # should store this in a list dictating the filename of the scene
-                print('BEV warped to behind vehicle')
+                # print('BEV warped to behind vehicle')
                 attr['location_y'] = self.egoNode.attr['location_y'] - self.relation_extractor.proximity_rels[-1][1] #assuming the last proximity threshold will be the most vague
 
             attr['rel_location_x'] = attr['location_x'] - self.egoNode.attr['location_x']           # x position relative to ego (neg left, pos right)
             attr['rel_location_y'] = attr['location_y'] - self.egoNode.attr['location_y']           # y position relative to ego (neg vehicle ahead of ego)
             attr['distance_abs'] = math.sqrt(attr['rel_location_x']**2 + attr['rel_location_y']**2) # absolute distance from ego
             #import pdb; pdb.set_trace()
+            # print("list : ",list_track_id," list ",i)
             node = Node('%s_%d' % (actor_type, idx), attr, actor_type, actor_value)
+            i= i + 1
             
             # add vehicle to graph
             self.add_node(node) #change
 
             # add lane vehicle relations to graph
             self.relation_extractor.add_mapping_to_relative_lanes(self, node)
+        # print("Boxes End: ")
+
 
 
     def add_node(self, node):
@@ -114,10 +151,12 @@ class SceneGraph:
         color = 'white'
         if 'ego' in node.name.lower():
             color = 'red'
-        elif 'car' in node.name.lower():
+        elif 'object_' in node.name.lower():
             color = 'green'
         elif 'lane' in node.name.lower():
             color = 'yellow'
+            
+        # print("Adding node: ", node.name,node)
         self.g.add_node(node, attr=node.attr, label=node.name, style='filled', fillcolor=color)
 
 
@@ -156,6 +195,7 @@ class SceneGraph:
             
             if (degree <=190 or degree >= 350):#TEST FOR CARLA #if degree <= 80 or (degree >=280 and degree <= 360):
                 n.name = n.label.lower() + "_" + actor_id
+                # print("Adding node n.name: ", n.name, n)
                 
                 self.add_node(n)
                 self.relation_extractor.add_mapping_to_relative_lanes(self, n)

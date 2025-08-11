@@ -4,6 +4,7 @@ class Node:
         self.attr = attr  # bounding box info
         self.label = label  # ActorType (ie "car")
         self.value = value # ActorType index in the config's ACTOR_NAMES list 
+        self.id="Irfan"
  
     def __repr__(self):
         return "%s" % self.name
