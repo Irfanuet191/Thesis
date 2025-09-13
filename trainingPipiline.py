@@ -54,6 +54,7 @@ model.to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
 loss_fn = nn.MSELoss()
 i=0
+best_test_loss=40.0
 for epoch in range(100):
     model.train()
     for batch in train_loader:
@@ -112,4 +113,11 @@ for epoch in range(100):
     
 
     print(f"Epoch {epoch+1}: Loss = {loss.item():.4f}, Test Loss = {loss_test.item():.4f}")
+
+    # ---- save best model ----
+    if loss_test.item() < best_test_loss:
+        best_test_loss = loss_test.item()
+        torch.save(model.state_dict(), "best_model_weights.pth")
+        print(f"✅ Saved new best model at epoch {epoch+1} with Test Loss {best_test_loss:.4f}")
+model.load_state_dict(torch.load("model_weights.pth"))
 
